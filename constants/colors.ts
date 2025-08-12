@@ -14,6 +14,7 @@ export const COLORS = {
   border: "#E5E7EB",
   background: "#F9FAFB",
   white: "#FFFFFF",
+  black: "#000000",
 };
 
 export default COLORS;
