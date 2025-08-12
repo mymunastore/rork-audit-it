@@ -46,7 +46,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={[COLORS.primary, COLORS.primaryDark]}
+        colors={[COLORS.darkPrimary, COLORS.darkSecondary, COLORS.primary]}
         style={styles.gradient}
       >
         <KeyboardAvoidingView 
@@ -55,7 +55,7 @@ export default function LoginScreen() {
         >
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Shield size={48} color={COLORS.white} />
+              <Shield size={48} color={COLORS.accent} />
             </View>
             <Text style={styles.title}>Audit It</Text>
             <Text style={styles.subtitle}>
@@ -150,11 +150,13 @@ const styles = StyleSheet.create({
   logoContainer: {
     width: 80,
     height: 80,
-    backgroundColor: COLORS.white + "20",
+    backgroundColor: COLORS.white + "15",
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    borderWidth: 2,
+    borderColor: COLORS.accent + "30",
   },
   title: {
     fontSize: 32,

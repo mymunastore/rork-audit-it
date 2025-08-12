@@ -39,6 +39,9 @@ interface StreamConfig {
   bitrate: number;
   fps: number;
   resolution: string;
+  aiEnhanced: boolean;
+  autoTranscription: boolean;
+  realTimeAnalysis: boolean;
 }
 
 interface ViewerConfig {
@@ -55,6 +58,9 @@ const defaultStreamConfig: StreamConfig = {
   bitrate: 2500,
   fps: 30,
   resolution: '1280x720',
+  aiEnhanced: true,
+  autoTranscription: true,
+  realTimeAnalysis: false,
 };
 
 const defaultViewerConfig: ViewerConfig = {
@@ -402,6 +408,42 @@ export default function RTMPStreamingPanel({ onClose, auditId }: RTMPStreamingPa
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+          </View>
+          
+          <View style={styles.aiSection}>
+            <Text style={styles.aiSectionTitle}>🤖 AI Features</Text>
+            
+            <View style={styles.switchGroup}>
+              <TouchableOpacity
+                style={styles.switchItem}
+                onPress={() => setStreamConfig(prev => ({ ...prev, aiEnhanced: !prev.aiEnhanced }))}
+              >
+                <Text style={styles.switchLabel}>AI Enhancement</Text>
+                <View style={[styles.switch, streamConfig.aiEnhanced && styles.switchActive]}>
+                  <View style={[styles.switchThumb, streamConfig.aiEnhanced && styles.switchThumbActive]} />
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.switchItem}
+                onPress={() => setStreamConfig(prev => ({ ...prev, autoTranscription: !prev.autoTranscription }))}
+              >
+                <Text style={styles.switchLabel}>Auto Transcription</Text>
+                <View style={[styles.switch, streamConfig.autoTranscription && styles.switchActive]}>
+                  <View style={[styles.switchThumb, streamConfig.autoTranscription && styles.switchThumbActive]} />
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.switchItem}
+                onPress={() => setStreamConfig(prev => ({ ...prev, realTimeAnalysis: !prev.realTimeAnalysis }))}
+              >
+                <Text style={styles.switchLabel}>Real-time Analysis</Text>
+                <View style={[styles.switch, streamConfig.realTimeAnalysis && styles.switchActive]}>
+                  <View style={[styles.switchThumb, streamConfig.realTimeAnalysis && styles.switchThumbActive]} />
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -843,5 +885,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.white,
+  },
+  aiSection: {
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  aiSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginBottom: 12,
   },
 });

@@ -39,8 +39,8 @@ class AIService {
   private async initializeAPIKey() {
     try {
       // Check if running in Expo environment with access to process.env
-      if (typeof process !== 'undefined' && process.env?.OPENAI_API_KEY) {
-        this.openAIKey = process.env.OPENAI_API_KEY;
+      if (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_OPENAI_API_KEY) {
+        this.openAIKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
         console.log('✅ OpenAI API key loaded from environment');
         return;
       }
@@ -296,6 +296,196 @@ Provide your analysis in a structured format with specific, actionable insights.
       hasKey: !!this.openAIKey,
       provider: this.openAIKey ? 'OpenAI' : 'Fallback Service'
     };
+  }
+
+  // Streaming-specific AI features
+  async transcribeStreamAudio(audioUri: string, language?: string): Promise<string> {
+    try {
+      console.log('🎤 Transcribing stream audio:', audioUri);
+      
+      const formData = new FormData();
+      
+      if (Platform.OS === 'web') {
+        // For web, assume audioUri is a blob URL or file
+        const response = await fetch(audioUri);
+        const blob = await response.blob();
+        formData.append('audio', blob, 'stream_audio.wav');
+      } else {
+        // For mobile, audioUri is a file path
+        const uriParts = audioUri.split('.');
+        const fileType = uriParts[uriParts.length - 1];
+        
+        formData.append('audio', {
+          uri: audioUri,
+          name: `stream_audio.${fileType}`,
+          type: `audio/${fileType}`
+        } as any);
+      }
+
+      if (language) {
+        formData.append('language', language);
+      }
+
+      const response = await fetch('https://toolkit.rork.com/stt/transcribe/', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Transcription failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Stream transcription completed');
+      
+      return data.text || 'No transcription result';
+    } catch (error) {
+      console.error('❌ Stream transcription failed:', error);
+      return `Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+  }
+
+  async analyzeStreamContent(content: string, context?: string): Promise<{
+    analysis: string;
+    insights: string[];
+    recommendations: string[];
+    confidence: number;
+  }> {
+    const systemPrompt = `You are an AI assistant specialized in real-time stream analysis for audit purposes. 
+    Analyze stream content for:
+    1. Key audit-relevant information
+    2. Potential compliance issues
+    3. Important financial discussions
+    4. Action items and follow-ups
+    
+    Provide concise, actionable insights.`;
+
+    const userPrompt = context 
+      ? `Context: ${context}\n\nStream Content: ${content}\n\nProvide analysis focusing on audit relevance and key insights.`
+      : `Analyze this stream content for audit purposes: ${content}`;
+
+    try {
+      const response = await this.generateCompletion([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ]);
+
+      if (!response.success) {
+        return {
+          analysis: response.completion,
+          insights: [],
+          recommendations: [],
+          confidence: 0
+        };
+      }
+
+      // Extract insights and recommendations from the response
+      const insights = this.extractInsights(response.completion);
+      const recommendations = this.extractRecommendations(response.completion);
+
+      return {
+        analysis: response.completion,
+        insights,
+        recommendations,
+        confidence: 0.85 // Mock confidence score
+      };
+    } catch (error) {
+      return {
+        analysis: `Analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        insights: [],
+        recommendations: ['Check network connection', 'Verify API configuration'],
+        confidence: 0
+      };
+    }
+  }
+
+  async enhanceStreamQuality(streamMetrics: {
+    bitrate: number;
+    fps: number;
+    resolution: string;
+    droppedFrames: number;
+    audioLevel: number;
+  }): Promise<{
+    score: number;
+    recommendations: string[];
+    optimizations: Record<string, any>;
+  }> {
+    const analysis = await this.generateCompletion([
+      {
+        role: 'system',
+        content: 'You are a streaming technology expert. Analyze stream metrics and provide optimization recommendations.'
+      },
+      {
+        role: 'user',
+        content: `Analyze these stream metrics and provide optimization suggestions:\n${JSON.stringify(streamMetrics, null, 2)}`
+      }
+    ]);
+
+    // Calculate quality score based on metrics
+    let score = 100;
+    if (streamMetrics.droppedFrames > 10) score -= 20;
+    if (streamMetrics.audioLevel < 0.3) score -= 15;
+    if (streamMetrics.bitrate < 1000) score -= 25;
+    if (streamMetrics.fps < 24) score -= 10;
+
+    const recommendations = this.extractRecommendations(analysis.completion);
+
+    return {
+      score: Math.max(0, score),
+      recommendations,
+      optimizations: {
+        suggestedBitrate: this.calculateOptimalBitrate(streamMetrics),
+        suggestedFPS: this.calculateOptimalFPS(streamMetrics),
+        suggestedResolution: this.calculateOptimalResolution(streamMetrics)
+      }
+    };
+  }
+
+  private extractInsights(text: string): string[] {
+    const insights = [];
+    const lines = text.split('\n');
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.includes('insight') || trimmed.includes('important') || trimmed.includes('note')) {
+        insights.push(trimmed);
+      }
+    }
+    
+    return insights.slice(0, 3);
+  }
+
+  private extractRecommendations(text: string): string[] {
+    const recommendations = [];
+    const lines = text.split('\n');
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.includes('recommend') || trimmed.includes('suggest') || trimmed.includes('should') || trimmed.includes('consider')) {
+        recommendations.push(trimmed);
+      }
+    }
+    
+    return recommendations.slice(0, 4);
+  }
+
+  private calculateOptimalBitrate(metrics: any): number {
+    const baseBitrate = 2500;
+    if (metrics.droppedFrames > 20) return Math.max(1000, baseBitrate * 0.7);
+    if (metrics.droppedFrames > 10) return Math.max(1500, baseBitrate * 0.85);
+    return baseBitrate;
+  }
+
+  private calculateOptimalFPS(metrics: any): number {
+    if (metrics.droppedFrames > 20) return 24;
+    if (metrics.droppedFrames > 10) return 30;
+    return 30;
+  }
+
+  private calculateOptimalResolution(metrics: any): string {
+    if (metrics.droppedFrames > 20 || metrics.bitrate < 1500) return '854x480';
+    if (metrics.droppedFrames > 10 || metrics.bitrate < 2000) return '1280x720';
+    return '1280x720';
   }
 }
 
