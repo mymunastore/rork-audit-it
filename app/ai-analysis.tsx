@@ -9,14 +9,18 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from "react-native";
-import { X, Send, Sparkles } from "lucide-react-native";
+import { X, Send, Sparkles, Settings } from "lucide-react-native";
 import { COLORS } from "@/constants/colors";
 import { router } from "expo-router";
+import { useAudit } from "@/providers/AuditProvider";
 
 export default function AIAnalysisScreen() {
+  const { aiService } = useAudit();
   const [query, setQuery] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState<string[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKey, setApiKey] = useState("");
 
   const handleAnalyze = async () => {
     if (!query.trim()) return;
@@ -24,27 +28,18 @@ export default function AIAnalysisScreen() {
     setIsAnalyzing(true);
     
     try {
-      const response = await fetch("https://toolkit.rork.com/text/llm/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await aiService.generateCompletion([
+        {
+          role: "system",
+          content: "You are an AI financial auditor assistant. Provide concise, professional analysis of financial data and audit queries."
         },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: "You are an AI financial auditor assistant. Provide concise, professional analysis of financial data and audit queries."
-            },
-            {
-              role: "user",
-              content: query
-            }
-          ]
-        }),
-      });
+        {
+          role: "user",
+          content: query
+        }
+      ]);
 
-      const data = await response.json();
-      setResults([...results, query, data.completion]);
+      setResults([...results, query, response.completion]);
       setQuery("");
     } catch (error) {
       console.error("Analysis error:", error);
@@ -54,6 +49,21 @@ export default function AIAnalysisScreen() {
     }
   };
 
+  const handleSaveAPIKey = async () => {
+    if (apiKey.trim()) {
+      await aiService.setAPIKey(apiKey.trim());
+      setApiKey("");
+      setShowSettings(false);
+    }
+  };
+
+  const handleRemoveAPIKey = async () => {
+    await aiService.removeAPIKey();
+    setShowSettings(false);
+  };
+
+  const apiStatus = aiService.getAPIStatus();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -61,8 +71,49 @@ export default function AIAnalysisScreen() {
           <X size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.title}>AI Financial Analysis</Text>
-        <Sparkles size={24} color={COLORS.primary} />
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={() => setShowSettings(!showSettings)}>
+            <Settings size={24} color={COLORS.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {showSettings && (
+        <View style={styles.settingsPanel}>
+          <Text style={styles.settingsTitle}>AI Configuration</Text>
+          <Text style={styles.statusText}>
+            Status: {apiStatus.hasKey ? '✅' : '⚠️'} {apiStatus.provider}
+          </Text>
+          
+          <TextInput
+            style={styles.apiKeyInput}
+            placeholder="Enter your OpenAI API key..."
+            value={apiKey}
+            onChangeText={setApiKey}
+            secureTextEntry
+            placeholderTextColor={COLORS.gray}
+          />
+          
+          <View style={styles.settingsButtons}>
+            <TouchableOpacity 
+              style={styles.saveButton}
+              onPress={handleSaveAPIKey}
+              disabled={!apiKey.trim()}
+            >
+              <Text style={styles.saveButtonText}>Save Key</Text>
+            </TouchableOpacity>
+            
+            {apiStatus.hasKey && (
+              <TouchableOpacity 
+                style={styles.removeButton}
+                onPress={handleRemoveAPIKey}
+              >
+                <Text style={styles.removeButtonText}>Remove Key</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       <ScrollView style={styles.chatContainer}>
         {results.length === 0 ? (
@@ -226,5 +277,63 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: COLORS.gray,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  settingsPanel: {
+    backgroundColor: COLORS.white,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  settingsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  statusText: {
+    fontSize: 14,
+    color: COLORS.gray,
+    marginBottom: 12,
+  },
+  apiKeyInput: {
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  settingsButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  saveButton: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  removeButton: {
+    flex: 1,
+    backgroundColor: COLORS.danger,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  removeButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

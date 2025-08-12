@@ -17,6 +17,8 @@ import {
   Activity,
   User,
   LogOut,
+  Bot,
+  Settings,
 } from "lucide-react-native";
 import { COLORS } from "@/constants/colors";
 import { useAudit } from "@/providers/AuditProvider";
@@ -25,7 +27,8 @@ import { LinearGradient } from "expo-linear-gradient";
 const { width } = Dimensions.get("window");
 
 export default function DashboardScreen() {
-  const { auditStats, currentAudits, user, logout } = useAudit();
+  const { auditStats, currentAudits, user, logout, aiService } = useAudit();
+  const aiStatus = aiService.getAPIStatus();
 
   const handleLogout = async () => {
     await logout();

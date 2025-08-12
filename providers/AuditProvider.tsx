@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import aiService from "@/services/aiService";
 
 interface Document {
   id: string;
@@ -275,27 +276,8 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
       const document = documents.find(doc => doc.id === documentId);
       if (!document) throw new Error("Document not found");
 
-      // Simulate AI analysis API call
-      const response = await fetch('https://toolkit.rork.com/text/llm/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a financial audit AI assistant. Analyze the provided document and identify potential risks, anomalies, and compliance issues.'
-            },
-            {
-              role: 'user',
-              content: `Please analyze this financial document: ${document.name}. Provide insights on potential risks, compliance issues, and recommendations.`
-            }
-          ]
-        })
-      });
-
-      const result = await response.json();
+      // Use the new AI service for analysis
+      const result = await aiService.analyzeFinancialDocument(document.name);
       
       // Update document status
       setDocuments(prev => prev.map(doc => 
@@ -317,17 +299,10 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
       setAuditTrails(prev => [trail, ...prev]);
 
       return {
-        success: true,
-        analysis: result.completion,
-        risks: [
-          {
-            title: "AI-Detected Anomaly",
-            description: result.completion.substring(0, 100) + "...",
-            level: "Medium",
-            color: "#F59E0B",
-            category: "AI Analysis",
-          }
-        ]
+        success: result.success,
+        analysis: result.analysis,
+        risks: result.risks,
+        error: result.error
       };
     } catch (error) {
       console.error('AI Analysis Error:', error);
@@ -413,5 +388,8 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
     toggleTask,
     addTask,
     analyzeDocumentWithAI,
+    
+    // AI Service
+    aiService,
   }), [user, isAuthenticated, isInitialized, login, logout, documents, tasks, auditStats, currentAudits, analysisResults, auditTrails, addDocument, deleteDocument, toggleTask, addTask, analyzeDocumentWithAI]);
 });
