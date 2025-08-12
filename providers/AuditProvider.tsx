@@ -3,6 +3,7 @@ import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import aiService from "@/services/aiService";
+import streamingService, { StreamingEvent } from "@/services/streamingService";
 
 interface Document {
   id: string;
@@ -60,6 +61,13 @@ interface AuditTrail {
   details: string;
 }
 
+interface StreamingStats {
+  isConnected: boolean;
+  totalEvents: number;
+  criticalAlerts: number;
+  lastEventTime?: string;
+}
+
 
 
 export const [AuditProvider, useAudit] = createContextHook(() => {
@@ -67,6 +75,12 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [auditTrails, setAuditTrails] = useState<AuditTrail[]>([]);
+  const [streamingStats, setStreamingStats] = useState<StreamingStats>({
+    isConnected: false,
+    totalEvents: 0,
+    criticalAlerts: 0,
+  });
+  const [recentStreamEvents, setRecentStreamEvents] = useState<StreamingEvent[]>([]);
   const [documents, setDocuments] = useState<Document[]>([
     {
       id: "1",
@@ -313,6 +327,56 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
     }
   }, [documents, user]);
 
+  // Streaming event handler
+  const handleStreamingEvent = useCallback((event: StreamingEvent) => {
+    console.log('Received streaming event in provider:', event);
+    
+    // Update recent events
+    setRecentStreamEvents(prev => [event, ...prev.slice(0, 9)]); // Keep last 10 events
+    
+    // Update streaming stats
+    setStreamingStats(prev => ({
+      ...prev,
+      totalEvents: prev.totalEvents + 1,
+      criticalAlerts: prev.criticalAlerts + (event.severity === 'critical' ? 1 : 0),
+      lastEventTime: event.timestamp,
+    }));
+    
+    // Add to audit trail if it's a critical event
+    if (event.severity === 'critical' || event.severity === 'high') {
+      const trail: AuditTrail = {
+        id: Date.now().toString(),
+        auditId: event.auditId || 'streaming',
+        action: `Critical ${event.type.replace('_', ' ')} Alert`,
+        userId: 'system',
+        userName: 'Live Streaming System',
+        timestamp: event.timestamp,
+        details: `${event.data?.description || event.type} from ${event.source}`,
+      };
+      setAuditTrails(prev => [trail, ...prev]);
+    }
+  }, []);
+
+  // Initialize streaming when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log('Setting up streaming event listener...');
+      const unsubscribe = streamingService.onEvent(handleStreamingEvent);
+      
+      const connectionUnsubscribe = streamingService.onConnectionChange((connection) => {
+        setStreamingStats(prev => ({
+          ...prev,
+          isConnected: connection.status === 'connected',
+        }));
+      });
+      
+      return () => {
+        unsubscribe();
+        connectionUnsubscribe();
+      };
+    }
+  }, [isAuthenticated, user, handleStreamingEvent]);
+
   // Load data from AsyncStorage on mount
   useEffect(() => {
     const loadData = async () => {
@@ -381,6 +445,8 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
     currentAudits,
     analysisResults,
     auditTrails,
+    streamingStats,
+    recentStreamEvents,
     
     // Actions
     addDocument,
@@ -389,7 +455,8 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
     addTask,
     analyzeDocumentWithAI,
     
-    // AI Service
+    // Services
     aiService,
-  }), [user, isAuthenticated, isInitialized, login, logout, documents, tasks, auditStats, currentAudits, analysisResults, auditTrails, addDocument, deleteDocument, toggleTask, addTask, analyzeDocumentWithAI]);
+    streamingService,
+  }), [user, isAuthenticated, isInitialized, login, logout, documents, tasks, auditStats, currentAudits, analysisResults, auditTrails, streamingStats, recentStreamEvents, addDocument, deleteDocument, toggleTask, addTask, analyzeDocumentWithAI]);
 });

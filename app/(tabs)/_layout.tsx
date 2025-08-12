@@ -4,7 +4,8 @@ import {
   FileText, 
   TrendingUp, 
   CheckSquare, 
-  FileBarChart 
+  FileBarChart,
+  Activity
 } from "lucide-react-native";
 import React from "react";
 import { COLORS } from "@/constants/colors";
@@ -52,6 +53,13 @@ export default function TabLayout() {
         options={{
           title: "Tasks",
           tabBarIcon: ({ color }) => <CheckSquare size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="streaming"
+        options={{
+          title: "Live Stream",
+          tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
         }}
       />
       <Tabs.Screen

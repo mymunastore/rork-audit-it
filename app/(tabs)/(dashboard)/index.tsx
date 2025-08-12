@@ -19,19 +19,36 @@ import {
   LogOut,
   Bot,
   Settings,
+  Wifi,
+  WifiOff,
+  Zap,
 } from "lucide-react-native";
 import { COLORS } from "@/constants/colors";
 import { useAudit } from "@/providers/AuditProvider";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 
 const { width } = Dimensions.get("window");
 
 export default function DashboardScreen() {
-  const { auditStats, currentAudits, user, logout, aiService } = useAudit();
+  const { 
+    auditStats, 
+    currentAudits, 
+    user, 
+    logout, 
+    aiService, 
+    streamingStats, 
+    recentStreamEvents,
+    streamingService 
+  } = useAudit();
   const aiStatus = aiService.getAPIStatus();
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleStartStreaming = async () => {
+    router.push('/(tabs)/streaming' as any);
   };
 
   const StatCard = ({ 
@@ -179,16 +196,82 @@ export default function DashboardScreen() {
         ))}
       </View>
 
+      <View style={styles.streamingStatus}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Live Streaming</Text>
+          <View style={styles.streamingIndicator}>
+            {streamingStats.isConnected ? (
+              <Wifi size={16} color={COLORS.success} />
+            ) : (
+              <WifiOff size={16} color={COLORS.gray} />
+            )}
+            <Text style={[styles.streamingText, { 
+              color: streamingStats.isConnected ? COLORS.success : COLORS.gray 
+            }]}>
+              {streamingStats.isConnected ? 'Connected' : 'Disconnected'}
+            </Text>
+          </View>
+        </View>
+        
+        {streamingStats.totalEvents > 0 && (
+          <View style={styles.streamingStats}>
+            <View style={styles.streamingStat}>
+              <Text style={styles.streamingStatValue}>{streamingStats.totalEvents}</Text>
+              <Text style={styles.streamingStatLabel}>Events</Text>
+            </View>
+            <View style={styles.streamingStat}>
+              <Text style={[styles.streamingStatValue, { color: COLORS.danger }]}>
+                {streamingStats.criticalAlerts}
+              </Text>
+              <Text style={styles.streamingStatLabel}>Critical</Text>
+            </View>
+            <View style={styles.streamingStat}>
+              <Text style={styles.streamingStatValue}>{recentStreamEvents.length}</Text>
+              <Text style={styles.streamingStatLabel}>Recent</Text>
+            </View>
+          </View>
+        )}
+        
+        {recentStreamEvents.length > 0 && (
+          <View style={styles.recentEvents}>
+            <Text style={styles.recentEventsTitle}>Recent Events</Text>
+            {recentStreamEvents.slice(0, 3).map((event, index) => (
+              <View key={event.id} style={styles.recentEventItem}>
+                <View style={[
+                  styles.eventSeverityDot, 
+                  { backgroundColor: event.severity === 'critical' ? COLORS.danger : 
+                                   event.severity === 'high' ? COLORS.warning : COLORS.info }
+                ]} />
+                <View style={styles.eventContent}>
+                  <Text style={styles.eventType}>
+                    {event.type.replace('_', ' ').toUpperCase()}
+                  </Text>
+                  <Text style={styles.eventDescription} numberOfLines={1}>
+                    {event.data?.description || `${event.type} from ${event.source}`}
+                  </Text>
+                </View>
+                <Text style={styles.eventTime}>
+                  {new Date(event.timestamp).toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
       <View style={styles.quickActions}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleStartStreaming}>
             <LinearGradient
               colors={[COLORS.primary, COLORS.primaryDark] as const}
               style={styles.actionGradient}
             >
-              <TrendingUp size={24} color={COLORS.white} />
-              <Text style={styles.actionText}>Start Analysis</Text>
+              <Activity size={24} color={COLORS.white} />
+              <Text style={styles.actionText}>Live Stream</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
@@ -407,5 +490,84 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 14,
     fontWeight: "600",
+  },
+  streamingStatus: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  streamingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  streamingText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  streamingStats: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  streamingStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  streamingStatValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  streamingStatLabel: {
+    fontSize: 12,
+    color: COLORS.gray,
+    marginTop: 2,
+  },
+  recentEvents: {
+    marginTop: 16,
+  },
+  recentEventsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+  recentEventItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  eventSeverityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  eventContent: {
+    flex: 1,
+  },
+  eventType: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  eventDescription: {
+    fontSize: 12,
+    color: COLORS.gray,
+  },
+  eventTime: {
+    fontSize: 11,
+    color: COLORS.gray,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
 });
