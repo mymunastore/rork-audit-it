@@ -9,10 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Shield, Mail, Lock, Eye, EyeOff } from "lucide-react-native";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react-native";
 import { COLORS } from "@/constants/colors";
 import { useAudit } from "@/providers/AuditProvider";
 import { router } from "expo-router";
@@ -49,19 +51,25 @@ export default function LoginScreen() {
         colors={[COLORS.darkPrimary, COLORS.darkSecondary, COLORS.primary]}
         style={styles.gradient}
       >
-        <KeyboardAvoidingView 
-          style={styles.content}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Shield size={48} color={COLORS.accent} />
+          <KeyboardAvoidingView 
+            style={styles.content}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <View style={styles.header}>
+              <Image
+                source={{ uri: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Audit%20It%20App%20Icon-sFqPqxqJqJqJqJqJqJqJqJqJqJqJqJqJ.png" }}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Audit It</Text>
+              <Text style={styles.subtitle}>
+                AI-Powered Financial Audit Platform
+              </Text>
             </View>
-            <Text style={styles.title}>Audit It</Text>
-            <Text style={styles.subtitle}>
-              AI-Powered Financial Audit Platform
-            </Text>
-          </View>
 
           <View style={styles.form}>
             <View style={styles.inputContainer}>
@@ -126,9 +134,10 @@ export default function LoginScreen() {
             </Text>
           </View>
         </KeyboardAvoidingView>
-      </LinearGradient>
-    </SafeAreaView>
-  );
+      </ScrollView>
+    </LinearGradient>
+  </SafeAreaView>
+);
 }
 
 const styles = StyleSheet.create({
@@ -137,6 +146,9 @@ const styles = StyleSheet.create({
   },
   gradient: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,
@@ -147,16 +159,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 48,
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: COLORS.white + "15",
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+  logo: {
+    width: 120,
+    height: 120,
     marginBottom: 16,
-    borderWidth: 2,
-    borderColor: COLORS.accent + "30",
   },
   title: {
     fontSize: 32,
