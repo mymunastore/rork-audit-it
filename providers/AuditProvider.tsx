@@ -392,15 +392,6 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
         if (storedUser && storedAuth === "true") {
           setUser(JSON.parse(storedUser));
           setIsAuthenticated(true);
-          // Navigate to tabs if authenticated
-          setTimeout(() => {
-            router.replace("/(tabs)" as any);
-          }, 100);
-        } else {
-          // Navigate to login if not authenticated
-          setTimeout(() => {
-            router.replace("/login" as any);
-          }, 100);
         }
         
         const storedTrails = await AsyncStorage.getItem("audit_trails");
@@ -411,10 +402,6 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
         setIsInitialized(true);
       } catch (error) {
         console.error("Error loading data:", error);
-        // Navigate to login on error
-        setTimeout(() => {
-          router.replace("/login" as any);
-        }, 100);
         setIsInitialized(true);
       }
     };
