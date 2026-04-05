@@ -5,7 +5,7 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuditProvider, useAudit } from "@/providers/AuditProvider";
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
@@ -22,13 +22,13 @@ function RootLayoutNav() {
     if (!isAuthenticated && inAuthGroup) {
       router.replace("/login");
     } else if (isAuthenticated && !inAuthGroup) {
-      router.replace("/(tabs)");
+      router.replace("/");
     }
   }, [isAuthenticated, isInitialized, segments, router]);
 
   useEffect(() => {
     if (isInitialized) {
-      SplashScreen.hideAsync();
+      void SplashScreen.hideAsync();
     }
   }, [isInitialized]);
 
