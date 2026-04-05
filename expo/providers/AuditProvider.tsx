@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import aiService from "@/services/aiService";
 import streamingService, { StreamingEvent } from "@/services/streamingService";
+import { COLORS } from "@/constants/colors";
 
 interface Document {
   id: string;
@@ -49,6 +50,13 @@ interface Audit {
   assignedTo: string[];
   createdBy: string;
   createdAt: string;
+}
+
+interface CreateAuditInput {
+  company: string;
+  period: string;
+  riskLevel: string;
+  createdBy?: string;
 }
 
 interface AuditTrail {
@@ -154,7 +162,7 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
     documents: 48,
   }), []);
 
-  const currentAudits: Audit[] = useMemo(() => [
+  const [currentAudits, setCurrentAudits] = useState<Audit[]>([
     {
       id: "1",
       company: "TechCorp Industries",
@@ -194,7 +202,7 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
       createdBy: "admin@audit.com",
       createdAt: "2024-01-05T09:15:00Z",
     },
-  ], []);
+  ]);
 
   const analysisResults = useMemo(() => ({
     risks: [
@@ -242,6 +250,39 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
     ));
   }, []);
 
+  const createAudit = useCallback((input: CreateAuditInput) => {
+    const statusColor = input.riskLevel === "High" ? COLORS.danger : input.riskLevel === "Medium" ? COLORS.warning : COLORS.success;
+    const audit: Audit = {
+      id: Date.now().toString(),
+      company: input.company,
+      period: input.period,
+      status: "Planning",
+      statusColor,
+      progress: 8,
+      dueDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+      riskLevel: input.riskLevel,
+      assignedTo: [user?.email ?? "admin@audit.com"],
+      createdBy: input.createdBy ?? user?.email ?? "admin@audit.com",
+      createdAt: new Date().toISOString(),
+    };
+
+    console.log("Creating audit", audit);
+    setCurrentAudits((prev) => [audit, ...prev]);
+
+    const trail: AuditTrail = {
+      id: `${Date.now()}-audit`,
+      auditId: audit.id,
+      action: "Audit Created",
+      userId: user?.id ?? "unknown",
+      userName: user?.name ?? "Unknown User",
+      timestamp: new Date().toISOString(),
+      details: `Created audit workspace for ${audit.company} (${audit.period})`,
+    };
+
+    setAuditTrails((prev) => [trail, ...prev]);
+    return audit;
+  }, [user]);
+
   const addTask = useCallback((task: Task) => {
     setTasks(prev => [task, ...prev]);
     // Add audit trail
@@ -257,7 +298,7 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
     setAuditTrails(prev => [trail, ...prev]);
   }, [user]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, _password: string) => {
     // Simulate authentication
     const mockUser: User = {
       id: "1",
@@ -405,16 +446,16 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
         setIsInitialized(true);
       }
     };
-    loadData();
+    void loadData();
   }, []);
 
   // Save data to AsyncStorage when they change
   useEffect(() => {
-    AsyncStorage.setItem("audit_tasks", JSON.stringify(tasks));
+    void AsyncStorage.setItem("audit_tasks", JSON.stringify(tasks));
   }, [tasks]);
 
   useEffect(() => {
-    AsyncStorage.setItem("audit_trails", JSON.stringify(auditTrails));
+    void AsyncStorage.setItem("audit_trails", JSON.stringify(auditTrails));
   }, [auditTrails]);
 
   return useMemo(() => ({
@@ -440,10 +481,11 @@ export const [AuditProvider, useAudit] = createContextHook(() => {
     deleteDocument,
     toggleTask,
     addTask,
+    createAudit,
     analyzeDocumentWithAI,
     
     // Services
     aiService,
     streamingService,
-  }), [user, isAuthenticated, isInitialized, login, logout, documents, tasks, auditStats, currentAudits, analysisResults, auditTrails, streamingStats, recentStreamEvents, addDocument, deleteDocument, toggleTask, addTask, analyzeDocumentWithAI]);
+  }), [user, isAuthenticated, isInitialized, login, logout, documents, tasks, auditStats, currentAudits, analysisResults, auditTrails, streamingStats, recentStreamEvents, addDocument, deleteDocument, toggleTask, addTask, createAudit, analyzeDocumentWithAI]);
 });

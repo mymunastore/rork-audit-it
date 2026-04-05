@@ -21,6 +21,36 @@ export default function DashboardLayout() {
           title: "Audit Dashboard",
         }} 
       />
+      <Stack.Screen 
+        name="create-audit" 
+        options={{ 
+          title: "Create Audit",
+        }} 
+      />
+      <Stack.Screen 
+        name="notifications" 
+        options={{ 
+          title: "Notifications",
+        }} 
+      />
+      <Stack.Screen 
+        name="settings" 
+        options={{ 
+          title: "Workspace Settings",
+        }} 
+      />
+      <Stack.Screen 
+        name="audit-details" 
+        options={{ 
+          title: "Audit Overview",
+        }} 
+      />
+      <Stack.Screen 
+        name="projects" 
+        options={{ 
+          title: "Projects",
+        }} 
+      />
     </Stack>
   );
 }
